@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+html, body {
+    background: none !important;
+    margin: 0; padding: 0;
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #e0e0e0;
+}
+* { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+
+#inventory-wrapper {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+#inventory-wrapper.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.inv-panel { background:rgba(0, 0, 0, 0.850); border-radius:0px; padding:40px 40px 40px; width:520px; box-shadow:0 6px 30px rgba(0,0,0,0.5); }
+.inv-header { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.inv-title { font-size:22px; font-weight:700; color:#ffffff; flex:1; }
+.action-btn { background:rgba(255,255,255,0.08); border:none; color:#bbb; border-radius:6px; width:30px; height:30px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s,color .15s; }
+.action-btn:hover { background:rgba(255,255,255,0.16); color:#fff; }
+.inv-weight-text { font-size:13px; color:#4caf50; font-weight:600; margin-bottom:12px; }
+.inv-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:30px; margin-bottom:14px; }
+.inv-slot { aspect-ratio:1; border-radius:0px; display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer; transition:background .15s; }
+.inv-slot.empty { background:transparent; border:4px dashed rgba(255, 255, 255, 0.496); }
+.inv-slot.empty:hover { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.3); }
+.inv-slot.filled { background:rgba(255,255,255,0.06); border:none; }
+.inv-slot.filled:hover { background:rgba(255,255,255,0.1); }
+.inv-slot.drag-over { border:2px solid #4caf50 !important; background:rgba(76,175,80,0.1) !important; }
+.inv-slot.dragging { opacity:.3; }
+.inv-item { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; cursor:grab; padding:6px; border-radius:6px; }
+.inv-item:active { cursor:grabbing; }
+.item-icon { font-size:36px; line-height:1; flex-shrink:0; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.5)); }
+.item-count { position:absolute; bottom:3px; right:5px; font-size:11px; font-weight:700; color:#fff; background:rgba(0,0,0,0.75); min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; padding:0 4px; border-radius:10px; }
+.close-btn { width:100%; background:none; border:none; color:#888; font-size:12px; letter-spacing:.12em; cursor:pointer; padding:6px; text-align:left; transition:color .15s; }
+.close-btn:hover { color:#e74c3c; }
+.hidden { display:none !important; }
+#context-menu { position:fixed; background:rgba(12,12,16,0.96); border:1px solid rgba(255,255,255,0.1); border-radius:7px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.6); z-index:999; min-width:140px; backdrop-filter:blur(10px); }
+#context-menu button { display:block; width:100%; background:none; border:none; color:#ccc; padding:10px 16px; text-align:left; font-size:13px; cursor:pointer; transition:background .1s; }
+#context-menu button:hover { background:rgba(255,255,255,0.08); color:#fff; }
+#tooltip { position:fixed; background:rgba(12,12,16,0.94); border:1px solid rgba(255,255,255,0.08); border-radius:5px; padding:7px 12px; font-size:12px; color:#ccc; pointer-events:none; z-index:998; display:flex; flex-direction:column; gap:2px; backdrop-filter:blur(8px); }
+#tooltip-name { color:#fff; font-weight:700; font-size:13px; }
+#tooltip-weight { color:#555; font-size:11px; }
+#drag-ghost { position:fixed; pointer-events:none; z-index:1000; transform:translate(-50%,-50%); font-size:32px; background:rgba(12,12,16,0.88); border-radius:8px; width:52px; height:52px; display:flex; align-items:center; justify-content:center; opacity:.9; }
+    </style>
+</head>
+<body>
+    <!-- ox_inventory Trick: UI immer im DOM, nur opacity:0 wenn zu -->
+    <div id="inventory-wrapper">
+        <div class="inv-panel" id="panel-player">
+            <div class="inv-header">
+                <span class="inv-title">Inventar</span>
+                <button class="action-btn">🔑</button>
+                <button class="action-btn">↻</button>
+                <button class="action-btn">🔫</button>
+                <button class="action-btn">🛡️</button>
+            </div>
+            <div class="inv-weight-text" id="player-weight-text">0.00 / 50.00 KG</div>
+            <div class="inv-grid" id="player-grid"></div>
+            <button class="close-btn" id="close-btn">SCHLIESSEN</button>
+        </div>
+        <div class="inv-panel hidden" id="panel-trunk">
+            <div class="inv-header">
+                <span class="inv-title">Kofferraum</span>
+                <button class="action-btn" style="margin-left:auto">↻</button>
+            </div>
+            <div class="inv-weight-text" id="trunk-weight-text">0.00 / 350.00 KG</div>
+            <div class="inv-grid" id="trunk-grid"></div>
+        </div>
+    </div>
+
+    <div id="context-menu" class="hidden">
+        <button id="ctx-use">Benutzen</button>
+        <button id="ctx-give">Geben</button>
+        <button id="ctx-drop">Wegwerfen</button>
+    </div>
+    <div id="tooltip" class="hidden">
+        <span id="tooltip-name"></span>
+        <span id="tooltip-weight"></span>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+</html>
