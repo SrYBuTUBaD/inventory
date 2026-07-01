@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{
+  width:100vw;height:100vh;background:transparent;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif
+}
+#container{
+  display:none;position:fixed;inset:0;
+  align-items:center;justify-content:center
+}
+#menu-root{
+  position:relative;width:500px;height:500px;
+  animation:menuOpen .18s cubic-bezier(.22,.68,0,1.2)
+}
+#arc-svg{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;overflow:visible
+}
+.item{
+  position:absolute;width:58px;height:58px;border-radius:50%;
+  background:rgba(8,12,20,.93);
+  border:2px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  transition:transform .14s,border-color .14s,box-shadow .14s,background .14s;
+  z-index:10;font-size:22px;overflow:hidden
+}
+.item.colored{border:none}
+.item:hover,.item.active{transform:scale(1.18);border-width:3px}
+.item:hover{border-color:rgba(255,255,255,0.7)!important;box-shadow:0 0 0 3px rgba(255,255,255,0.25),0 0 18px rgba(255,255,255,0.3)!important}
+.icon-i{font-style:italic;font-weight:900;font-size:26px;color:white;font-family:Georgia,serif;line-height:1}
+#center{
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:170px;text-align:center;pointer-events:none;z-index:20
+}
+#center-title{color:#fff;font-size:17px;font-weight:800;line-height:1.25;text-shadow:0 2px 14px rgba(0,0,0,.95),0 0 30px rgba(0,0,0,.7)}
+#center-desc{color:rgba(255,255,255,.45);font-size:11px;line-height:1.4;margin-top:5px;text-shadow:0 1px 10px rgba(0,0,0,.95)}
+#target-label{
+  position:absolute;left:50%;top:-38px;
+  transform:translateX(-50%);white-space:nowrap;
+  color:rgba(255,255,255,.55);font-size:12px;font-weight:600;
+  letter-spacing:.5px;pointer-events:none;text-shadow:0 1px 8px rgba(0,0,0,.9)
+}
+@keyframes menuOpen{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
+
+/* Eject Overlay */
+#eject-overlay{
+  display:none;position:fixed;inset:0;
+  align-items:center;justify-content:center;z-index:300
+}
+#eject-box{
+  background:rgba(8,12,20,.97);border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;padding:20px 22px;min-width:240px;
+  animation:menuOpen .15s cubic-bezier(.22,.68,0,1.2)
+}
+#eject-title{
+  color:#fff;font-size:13px;font-weight:700;
+  text-align:center;margin-bottom:14px;letter-spacing:.3px
+}
+#eject-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px
+}
+.seat-btn{
+  display:flex;flex-direction:column;align-items:center;
+  padding:11px 6px;border-radius:8px;border:2px solid;
+  transition:all .14s
+}
+.seat-btn.occupied{
+  border-color:rgba(239,68,68,.7);background:rgba(239,68,68,.1);cursor:pointer
+}
+.seat-btn.occupied:hover{
+  background:rgba(239,68,68,.25);border-color:#ef4444;transform:scale(1.05)
+}
+.seat-btn.empty{
+  border-color:rgba(255,255,255,.08);background:rgba(255,255,255,.02);
+  opacity:.4;cursor:default
+}
+.seat-btn.driver{
+  border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.04);
+  opacity:.55;cursor:default
+}
+.seat-icon{font-size:20px;margin-bottom:4px}
+.seat-label{color:rgba(255,255,255,.5);font-size:10px;letter-spacing:.2px}
+.seat-name{
+  color:#fff;font-size:12px;font-weight:600;margin-top:3px;
+  max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#eject-footer{text-align:center}
+#eject-cancel-btn{
+  padding:7px 20px;background:rgba(255,255,255,.10);border:none;
+  border-radius:5px;color:#fff;font-size:12px;font-weight:600;
+  cursor:pointer;transition:opacity .12s
+}
+#eject-cancel-btn:hover{opacity:.75}
+
+/* Input Modal */
+#input-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.55);
+  align-items:center;justify-content:center;z-index:200
+}
+#input-box{
+  background:#141414;border:1px solid rgba(255,255,255,0.10);
+  border-radius:8px;padding:20px 22px;min-width:300px;
+  animation:menuOpen .15s cubic-bezier(.22,.68,0,1.2)
+}
+#input-box-title{color:#fff;font-size:15px;font-weight:700;margin-bottom:14px}
+.input-row{margin-bottom:10px}
+.input-row-label{color:rgba(255,255,255,.5);font-size:12px;margin-bottom:5px}
+.input-field{
+  width:100%;padding:8px 12px;background:#222;
+  border:1px solid rgba(255,255,255,0.18);border-radius:5px;
+  color:#fff;font-size:14px;outline:none;transition:border-color .15s
+}
+.input-field:focus{border-color:rgba(255,255,255,0.45)}
+.input-buttons{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+.input-btn{padding:7px 18px;border:none;border-radius:5px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .12s}
+.input-btn:hover{opacity:.85}
+#btn-cancel{background:rgba(255,255,255,0.10);color:#fff}
+#btn-ok{background:#4cde6f;color:#000}
+</style>
+</head>
+<body>
+
+<div id="container">
+  <div id="menu-root">
+    <div id="target-label"></div>
+    <svg id="arc-svg" viewBox="0 0 500 500">
+      <circle id="outer-ring" cx="250" cy="250" r="215" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+      <circle cx="250" cy="250" r="68" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+      <path id="arc-path" d="" fill="transparent"/>
+    </svg>
+    <div id="items-layer"></div>
+    <div id="center">
+      <div id="center-title"></div>
+      <div id="center-desc"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Eject Seat Overlay -->
+<div id="eject-overlay">
+  <div id="eject-box">
+    <div id="eject-title">🚪 Mitfahrer rauswerfen</div>
+    <div id="eject-grid"></div>
+    <div id="eject-footer">
+      <button id="eject-cancel-btn">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Geld / Item: Input Modal -->
+<div id="input-overlay">
+  <div id="input-box">
+    <div id="input-box-title">Geld geben</div>
+    <div id="input-rows"></div>
+    <div class="input-buttons">
+      <button class="input-btn" id="btn-cancel">Abbrechen</button>
+      <button class="input-btn" id="btn-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const CX = 250, CY = 250;
+const ITEM_R = 190, ICON_SZ = 58, ARC_IN = 72, ARC_OUT = 218;
+
+let items = [], activeIdx = -1, menuType = null;
+let menuIsOpen = false;
+let inputMode = null;
+let ejectNetVehId = null;
+
+// ── Input Modal ────────────────────────────────────
+const inputOverlay = document.getElementById('input-overlay');
+const inputRows    = document.getElementById('input-rows');
+const inputTitle   = document.getElementById('input-box-title');
+
+function showInput(mode) {
+  inputMode = mode;
+  inputRows.innerHTML = '';
+  if (mode === 'money') {
+    inputTitle.textContent = 'Geld geben';
+    inputRows.innerHTML = `
+      <div class="input-row">
+        <div class="input-row-label">Betrag in $</div>
+        <input id="field-amount" class="input-field" type="number" min="1" max="100000" placeholder="z.B. 500">
+      </div>`;
+  } else if (mode === 'item') {
+    inputTitle.textContent = 'Item geben';
+    inputRows.innerHTML = `
+      <div class="input-row">
+        <div class="input-row-label">Item-Name</div>
+        <input id="field-name" class="input-field" type="text" placeholder="z.B. medikit" autocomplete="off">
+      </div>
+      <div class="input-row">
+        <div class="input-row-label">Menge</div>
+        <input id="field-amount" class="input-field" type="number" min="1" max="1000" placeholder="z.B. 1">
+      </div>`;
+  }
+  inputOverlay.style.display = 'flex';
+  setTimeout(() => { const f = inputRows.querySelector('input'); if (f) f.focus(); }, 30);
+  inputRows.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.stopPropagation(); submitInput(); }
+      if (e.key === 'Escape') { e.stopPropagation(); cancelInput(); }
+    });
+  });
+}
+function submitInput() {
+  inputOverlay.style.display = 'none';
+  if (inputMode === 'money') {
+    const val = (document.getElementById('field-amount') || {}).value || '';
+    nui('moneyInput', { amount: val });
+  } else if (inputMode === 'item') {
+    const name = (document.getElementById('field-name')   || {}).value || '';
+    const amt  = (document.getElementById('field-amount') || {}).value || '';
+    nui('itemInput', { itemName: name, amount: amt });
+  }
+  inputMode = null;
+}
+function cancelInput() {
+  inputOverlay.style.display = 'none';
+  if (inputMode === 'money')     nui('moneyCancel', {});
+  else if (inputMode === 'item') nui('itemCancel',  {});
+  inputMode = null;
+}
+
+document.getElementById('btn-ok').addEventListener('click', submitInput);
+document.getElementById('btn-cancel').addEventListener('click', cancelInput);
+document.getElementById('eject-cancel-btn').addEventListener('click', closeEjectMenu);
+
+// ── Eject overlay ──────────────────────────────────
+const SEAT_LABELS = ['Beifahrer','Hinten L','Hinten R','Hinten M','Hinten L2','Hinten R2','Extra 1','Extra 2'];
+
+function showEjectMenu(data) {
+  ejectNetVehId = data.netVehId;
+  const grid = document.getElementById('eject-grid');
+  grid.innerHTML = '';
+  data.seats.forEach(s => {
+    const el    = document.createElement('div');
+    const cls   = s.isDriver ? 'driver' : (s.occupied ? 'occupied' : 'empty');
+    el.className = 'seat-btn ' + cls;
+    const icon  = s.isDriver ? '🚗' : (s.occupied ? '👤' : '🪑');
+    const label = s.seat === -1 ? 'Fahrer' : (SEAT_LABELS[s.seat] || ('Sitz ' + (s.seat + 1)));
+    el.innerHTML = `<div class="seat-icon">${icon}</div><div class="seat-label">${label}</div>`
+      + (s.name ? `<div class="seat-name">${s.name}</div>` : '');
+    if (s.occupied && !s.isDriver) el.addEventListener('click', () => doEjectSeat(s.seat));
+    grid.appendChild(el);
+  });
+  document.getElementById('eject-overlay').style.display = 'flex';
+}
+
+function doEjectSeat(seat) {
+  document.getElementById('eject-overlay').style.display = 'none';
+  nui('ejectSeat', { seat: seat, netVehId: ejectNetVehId });
+  ejectNetVehId = null;
+}
+
+function closeEjectMenu() {
+  document.getElementById('eject-overlay').style.display = 'none';
+  nui('ejectClose', {});
+  ejectNetVehId = null;
+}
+
+// ── Messages ───────────────────────────────────────
+window.addEventListener('message', e => {
+  const m = e.data;
+  if (m.type === 'open') {
+    items = m.items; menuType = m.menuType;
+    document.getElementById('target-label').textContent = m.targetName || '';
+    buildItems();
+    setActive(-1, true);
+    document.getElementById('container').style.display = 'flex';
+    menuIsOpen = true;
+  } else if (m.type === 'close') {
+    hide();
+  } else if (m.type === 'inputPrompt') {
+    showInput(m.mode || 'money');
+  } else if (m.type === 'setActive') {
+    setActive(m.idx);
+  } else if (m.type === 'ejectMenu') {
+    showEjectMenu(m);
+  }
+});
+
+function hide() {
+  document.getElementById('container').style.display = 'none';
+  activeIdx = -1;
+  menuIsOpen = false;
+}
+
+// ── Build items ────────────────────────────────────
+function buildItems() {
+  const layer = document.getElementById('items-layer');
+  layer.innerHTML = '';
+  const n = items.length;
+  items.forEach((item, i) => {
+    const angleDeg = (i / n) * 360 - 90;
+    const rad = angleDeg * Math.PI / 180;
+    const x = CX + ITEM_R * Math.cos(rad), y = CY + ITEM_R * Math.sin(rad);
+    const el = document.createElement('div');
+    el.className = 'item' + (item.bg ? ' colored' : '');
+    el.id = 'item-' + i;
+    el.style.left = (x - ICON_SZ/2) + 'px';
+    el.style.top  = (y - ICON_SZ/2) + 'px';
+    if (item.bg) el.style.background = item.color;
+    if (item.icon === 'i') {
+      const span = document.createElement('span');
+      span.className = 'icon-i'; span.textContent = 'i';
+      el.appendChild(span);
+    } else { el.textContent = item.icon; }
+    el.addEventListener('mouseenter', () => setActive(i));
+    el.addEventListener('click',      () => fireAction(items[i].id));
+    layer.appendChild(el);
+  });
+}
+
+// ── Click ──────────────────────────────────────────
+document.addEventListener('click', e => {
+  if (inputOverlay.style.display !== 'none') return;
+  if (activeIdx < 0) return;
+  fireAction(items[activeIdx].id);
+});
+
+document.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (inputOverlay.style.display !== 'none') { cancelInput(); return; }
+  nui('close');
+});
+
+// ── Keys ───────────────────────────────────────────
+document.addEventListener('keyup', e => {
+  if (e.code === 'KeyX') {
+    if (!menuIsOpen || inputOverlay.style.display !== 'none') return;
+    nui('xrelease', {});
+    return;
+  }
+  if (e.key === 'Escape') {
+    if (inputOverlay.style.display !== 'none') { cancelInput(); return; }
+    if (document.getElementById('eject-overlay').style.display !== 'none') { closeEjectMenu(); return; }
+    nui('close');
+  }
+});
+
+// ── Set active ─────────────────────────────────────
+function setActive(idx, force) {
+  if (idx === activeIdx && !force) return;
+  activeIdx = idx;
+  items.forEach((item, i) => {
+    const el = document.getElementById('item-' + i);
+    if (!el) return;
+    if (i === idx) {
+      el.classList.add('active');
+      if (!item.bg) { el.style.borderColor = item.color; el.style.boxShadow = `0 0 0 3px ${item.color}55, 0 0 18px ${item.color}40`; }
+      else { el.style.boxShadow = `0 0 0 3px rgba(255,255,255,.25), 0 0 22px ${item.color}70`; }
+    } else {
+      el.classList.remove('active');
+      if (!item.bg) { el.style.borderColor = 'rgba(255,255,255,.08)'; el.style.boxShadow = ''; }
+      else { el.style.boxShadow = ''; }
+    }
+  });
+  const arcEl = document.getElementById('arc-path');
+  const titleEl = document.getElementById('center-title');
+  const descEl  = document.getElementById('center-desc');
+  if (idx >= 0 && items[idx]) {
+    const item = items[idx], n = items.length, sector = 360 / n, base = idx * sector;
+    const path = arcPath(CX, CY, ARC_IN, ARC_OUT, base - sector/2, base + sector/2);
+    arcEl.setAttribute('d', path);
+    arcEl.setAttribute('fill', item.color + '44');
+    arcEl.setAttribute('stroke', item.color + '33');
+    arcEl.setAttribute('stroke-width', '1');
+    titleEl.textContent = item.label;
+    descEl.textContent  = item.desc;
+  } else {
+    arcEl.setAttribute('d', '');
+    titleEl.textContent = '';
+    descEl.textContent  = '';
+  }
+}
+
+function fireAction(id) { nui('action', { action: id }); }
+
+function arcPath(cx, cy, r1, r2, startDeg, endDeg) {
+  const pt = (r, d) => ({ x: cx + r * Math.sin(d*Math.PI/180), y: cy - r * Math.cos(d*Math.PI/180) });
+  const p1=pt(r1,startDeg), p2=pt(r2,startDeg), p3=pt(r2,endDeg), p4=pt(r1,endDeg);
+  const large = ((endDeg-startDeg+360)%360 > 180) ? 1 : 0;
+  return `M${f(p1.x)} ${f(p1.y)} L${f(p2.x)} ${f(p2.y)} A${r2} ${r2} 0 ${large} 1 ${f(p3.x)} ${f(p3.y)} L${f(p4.x)} ${f(p4.y)} A${r1} ${r1} 0 ${large} 0 ${f(p1.x)} ${f(p1.y)}Z`;
+}
+function f(n) { return Math.round(n*100)/100; }
+
+function nui(ev, data) {
+  fetch('https://xmenu/' + ev, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data||{}) });
+}
+</script>
+</body>
+</html>
